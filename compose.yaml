@@ -303,3 +303,7 @@ networks:
   traefik-public:
     name: traefik-public
     external: true
+
+
+
+# bench new-site --mariadb-root-password oHY8kNc2qKuuNJTKPjpk --admin-password oHY8kNc2qKuuNJTKPjpk --no-mariadb-socket --force --install-app erpnext  erp.example.com
