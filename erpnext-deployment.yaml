@@ -1,0 +1,522 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: excelazmin/erpnext-v14:v15.3.0
+        volumeMounts:
+        - mountPath: /home/frappe/frappe-bench/sites
+          name: sites-volume
+        - mountPath: /home/frappe/frappe-bench/logs
+          name: logs-volume
+        envFrom:
+        - configMapRef:
+            name: erpnext-config
+      volumes:
+      - name: sites-volume
+        persistentVolumeClaim:
+          claimName: sites-pvc
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: logs-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: configurator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: configurator
+  template:
+    metadata:
+      labels:
+        app: configurator
+    spec:
+      containers:
+      - name: configurator
+        image: excelazmin/erpnext-v14:v15.3.0
+        command: ["/bin/bash", "-c", "ls -1 apps > sites/apps.txt; bench set-config -g db_host $DB_HOST; bench set-config -gp db_port $DB_PORT; bench set-config -g redis_cache redis://$REDIS_CACHE; bench set-config -g redis_queue redis://$REDIS_QUEUE; bench set-config -g redis_socketio redis://$REDIS_SOCKETIO; bench set-config -gp socketio_port $SOCKETIO_PORT;"]
+        volumeMounts:
+        - mountPath: /home/frappe/frappe-bench/sites
+          name: sites-volume
+        - mountPath: /home/frappe/frappe-bench/logs
+          name: logs-volume
+        envFrom:
+        - configMapRef:
+            name: erpnext-config
+      volumes:
+      - name: sites-volume
+        persistentVolumeClaim:
+          claimName: sites-pvc
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: logs-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mariadb-master
+  template:
+    metadata:
+      labels:
+        app: mariadb-master
+    spec:
+      containers:
+      - name: mariadb-master
+        image: docker.io/bitnami/mariadb:10.8
+        volumeMounts:
+        - mountPath: /bitnami/mariadb
+          name: mariadb-master-volume
+        envFrom:
+        - configMapRef:
+            name: erpnext-config
+      volumes:
+      - name: mariadb-master-volume
+        persistentVolumeClaim:
+          claimName: mariadb-master-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb-slave1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mariadb-slave1
+  template:
+    metadata:
+      labels:
+        app: mariadb-slave1
+    spec:
+      containers:
+      - name: mariadb-slave1
+        image: docker.io/bitnami/mariadb:10.8
+        volumeMounts:
+        - mountPath: /bitnami/mariadb
+          name: mariadb-slave1-volume
+        envFrom:
+        - configMapRef:
+            name: erpnext-config
+      volumes:
+      - name: mariadb-slave1-volume
+        persistentVolumeClaim:
+          claimName: mariadb-slave1-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb-slave2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mariadb-slave2
+  template:
+    metadata:
+      labels:
+        app: mariadb-slave2
+    spec:
+      containers:
+      - name: mariadb-slave2
+        image: docker.io/bitnami/mariadb:10.8
+        volumeMounts:
+        - mountPath: /bitnami/mariadb
+          name: mariadb-slave2-volume
+        envFrom:
+        - configMapRef:
+            name: erpnext-config
+      volumes:
+      - name: mariadb-slave2-volume
+        persistentVolumeClaim:
+          claimName: mariadb-slave2-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: excelazmin/erpnext-v14:v15.3.0
+        command: ["nginx-entrypoint.sh"]
+        volumeMounts:
+        - mountPath: /home/frappe/frappe-bench/sites
+          name: sites-volume
+        - mountPath: /home/frappe/frappe-bench/logs
+          name: logs-volume
+        envFrom:
+        - configMapRef:
+            name: erpnext-config
+      volumes:
+      - name: sites-volume
+        persistentVolumeClaim:
+          claimName: sites-pvc
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: logs-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-queue
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-queue
+  template:
+    metadata:
+      labels:
+        app: redis-queue
+    spec:
+      containers:
+      - name: redis-queue
+        image: redis:6.2-alpine
+        volumeMounts:
+        - mountPath: /data
+          name: redis-queue-volume
+      volumes:
+      - name: redis-queue-volume
+        persistentVolumeClaim:
+          claimName: redis-queue-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-cache
+  template:
+    metadata:
+      labels:
+        app: redis-cache
+    spec:
+      containers:
+      - name: redis-cache
+        image: redis:6.2-alpine
+        volumeMounts:
+        - mountPath: /data
+          name: redis-cache-volume
+      volumes:
+      - name: redis-cache-volume
+        persistentVolumeClaim:
+          claimName: redis-cache-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-socketio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-socketio
+  template:
+    metadata:
+      labels:
+        app: redis-socketio
+    spec:
+      containers:
+      - name: redis-socketio
+        image: redis:6.2-alpine
+        volumeMounts:
+        - mountPath: /data
+          name: redis-socketio-volume
+      volumes:
+      - name: redis-socketio-volume
+        persistentVolumeClaim:
+          claimName: redis-socketio-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: queue-default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: queue-default
+  template:
+    metadata:
+      labels:
+        app: queue-default
+    spec:
+      containers:
+      - name: queue-default
+        image: excelazmin/erpnext-v14:v15.3.0
+        command: ["bench", "worker", "--queue", "default"]
+        volumeMounts:
+        - mountPath: /home/frappe/frappe-bench/sites
+          name: sites-volume
+        - mountPath: /home/frappe/frappe-bench/logs
+          name: logs-volume
+      volumes:
+      - name: sites-volume
+        persistentVolumeClaim:
+          claimName: sites-pvc
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: logs-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: queue-long
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: queue-long
+  template:
+    metadata:
+      labels:
+        app: queue-long
+    spec:
+      containers:
+      - name: queue-long
+        image: excelazmin/erpnext-v14:v15.3.0
+        command: ["bench", "worker", "--queue", "long"]
+        volumeMounts:
+        - mountPath: /home/frappe/frappe-bench/sites
+          name: sites-volume
+        - mountPath: /home/frappe/frappe-bench/logs
+          name: logs-volume
+      volumes:
+      - name: sites-volume
+        persistentVolumeClaim:
+          claimName: sites-pvc
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: logs-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: queue-short
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: queue-short
+  template:
+    metadata:
+      labels:
+        app: queue-short
+    spec:
+      containers:
+      - name: queue-short
+        image: excelazmin/erpnext-v14:v15.3.0
+        command: ["bench", "worker", "--queue", "short"]
+        volumeMounts:
+        - mountPath: /home/frappe/frappe-bench/sites
+          name: sites-volume
+        - mountPath: /home/frappe/frappe-bench/logs
+          name: logs-volume
+      volumes:
+      - name: sites-volume
+        persistentVolumeClaim:
+          claimName: sites-pvc
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: logs-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scheduler
+  template:
+    metadata:
+      labels:
+        app: scheduler
+    spec:
+      containers:
+      - name: scheduler
+        image: excelazmin/erpnext-v14:v15.3.0
+        command: ["bench", "schedule"]
+        volumeMounts:
+        - mountPath: /home/frappe/frappe-bench/sites
+          name: sites-volume
+        - mountPath: /home/frappe/frappe-bench/logs
+          name: logs-volume
+      volumes:
+      - name: sites-volume
+        persistentVolumeClaim:
+          claimName: sites-pvc
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: logs-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: websocket
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: websocket
+  template:
+    metadata:
+      labels:
+        app: websocket
+    spec:
+      containers:
+      - name: websocket
+        image: excelazmin/erpnext-v14:v15.3.0
+        command: ["node", "/home/frappe/frappe-bench/apps/frappe/socketio.js"]
+        volumeMounts:
+        - mountPath: /home/frappe/frappe-bench/sites
+          name: sites-volume
+        - mountPath: /home/frappe/frappe-bench/logs
+          name: logs-volume
+      volumes:
+      - name: sites-volume
+        persistentVolumeClaim:
+          claimName: sites-pvc
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: logs-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  selector:
+    app: backend
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb-master
+spec:
+  selector:
+    app: mariadb-master
+  ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb-slave1
+spec:
+  selector:
+    app: mariadb-slave1
+  ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb-slave2
+spec:
+  selector:
+    app: mariadb-slave2
+  ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-queue
+spec:
+  selector:
+    app: redis-queue
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-cache
+spec:
+  selector:
+    app: redis-cache
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-socketio
+spec:
+  selector:
+    app: redis-socketio
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  selector:
+    app: frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: websocket
+spec:
+  selector:
+    app: websocket
+  ports:
+    - protocol: TCP
+      port: 9000
+      targetPort: 9000

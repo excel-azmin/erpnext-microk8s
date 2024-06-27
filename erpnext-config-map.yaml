@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: erpnext-config
+data:
+  DB_HOST: "mariadb-master"
+  DB_PORT: "3306"
+  REDIS_CACHE: "redis-cache:6379"
+  REDIS_QUEUE: "redis-queue:6379"
+  REDIS_SOCKETIO: "redis-socketio:6379"
+  SOCKETIO_PORT: "9000"
+  MARIADB_CHARACTER_SET: "utf8mb4"
+  MARIADB_COLLATE: "utf8mb4_unicode_ci"
+  MARIADB_EXTRA_FLAGS: "--skip-character-set-client-handshake"
+  MARIADB_PASSWORD: "oHY8kNc2qKuuNJTKPjpk"
+  MARIADB_REPLICATION_USER: "repl_user"
+  MARIADB_USER: "my_user"
+  ALLOW_EMPTY_PASSWORD: "No"
+  MARIADB_ROOT_PASSWORD: "oHY8kNc2qKuuNJTKPjpk"
+  MARIADB_REPLICATION_PASSWORD: "oHY8kNc2qKuuNJTKPjpk"
+  FRAPPE_SITE_NAME_HEADER: "$$host"
+  BACKEND: "backend:8000"
+  SOCKETIO: "websocket:9000"
+  UPSTREAM_REAL_IP_ADDRESS: "127.0.0.1"
+  UPSTREAM_REAL_IP_HEADER: "X-Forwarded-For"
+  UPSTREAM_REAL_IP_RECURSIVE: "off"
+  PROXY_READ_TIMEOUT: "120"
+  CLIENT_MAX_BODY_SIZE: "50m"
