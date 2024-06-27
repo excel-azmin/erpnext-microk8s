@@ -2,6 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: sites-pvc
+  namespace: erpnext
 spec:
   accessModes:
     - ReadWriteMany
@@ -13,6 +14,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: logs-pvc
+  namespace: erpnext
 spec:
   accessModes:
     - ReadWriteMany
@@ -24,6 +26,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mariadb-master-pvc
+  namespace: erpnext
 spec:
   accessModes:
     - ReadWriteOnce
@@ -35,6 +38,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mariadb-slave1-pvc
+  namespace: erpnext
 spec:
   accessModes:
     - ReadWriteOnce
@@ -46,6 +50,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mariadb-slave2-pvc
+  namespace: erpnext
 spec:
   accessModes:
     - ReadWriteOnce
@@ -57,6 +62,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: redis-queue-pvc
+  namespace: erpnext
 spec:
   accessModes:
     - ReadWriteMany
@@ -68,6 +74,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: redis-cache-pvc
+  namespace: erpnext
 spec:
   accessModes:
     - ReadWriteMany
@@ -79,6 +86,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: redis-socketio-pvc
+  namespace: erpnext
 spec:
   accessModes:
     - ReadWriteMany

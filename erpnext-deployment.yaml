@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend
+  namespace: erpnext
 spec:
   replicas: 1
   selector:
@@ -35,6 +36,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: configurator
+  namespace: erpnext
 spec:
   replicas: 1
   selector:
@@ -48,7 +50,7 @@ spec:
       containers:
       - name: configurator
         image: excelazmin/erpnext-v14:v15.3.0
-        command: ["/bin/bash", "-c", "ls -1 apps > sites/apps.txt; bench set-config -g db_host $DB_HOST; bench set-config -gp db_port $DB_PORT; bench set-config -g redis_cache redis://$REDIS_CACHE; bench set-config -g redis_queue redis://$REDIS_QUEUE; bench set-config -g redis_socketio redis://$REDIS_SOCKETIO; bench set-config -gp socketio_port $SOCKETIO_PORT;"]
+        command: ["/bin/bash", "-c", "if [ ! -f sites/common_site_config.json ]; then echo '{}' > sites/common_site_config.json; fi; ls -1 apps > sites/apps.txt; bench set-config -g db_host $DB_HOST; bench set-config -gp db_port $DB_PORT; bench set-config -g redis_cache redis://$REDIS_CACHE; bench set-config -g redis_queue redis://$REDIS_QUEUE; bench set-config -g redis_socketio redis://$REDIS_SOCKETIO; bench set-config -gp socketio_port $SOCKETIO_PORT;"]
         volumeMounts:
         - mountPath: /home/frappe/frappe-bench/sites
           name: sites-volume
@@ -64,11 +66,13 @@ spec:
       - name: logs-volume
         persistentVolumeClaim:
           claimName: logs-pvc
+
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mariadb-master
+  namespace: erpnext
 spec:
   replicas: 1
   selector:
@@ -97,6 +101,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mariadb-slave1
+  namespace: erpnext
 spec:
   replicas: 1
   selector:
@@ -125,6 +130,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mariadb-slave2
+  namespace: erpnext
 spec:
   replicas: 1
   selector:
@@ -153,6 +159,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend
+  namespace: erpnext
 spec:
   replicas: 1
   selector:
@@ -172,6 +179,23 @@ spec:
           name: sites-volume
         - mountPath: /home/frappe/frappe-bench/logs
           name: logs-volume
+        env:
+        - name: BACKEND
+          value: backend:8000
+        - name: FRAPPE_SITE_NAME_HEADER
+          value: $$host
+        - name: SOCKETIO
+          value: websocket:9000
+        - name: UPSTREAM_REAL_IP_ADDRESS
+          value: 127.0.0.1
+        - name: UPSTREAM_REAL_IP_HEADER
+          value: X-Forwarded-For
+        - name: UPSTREAM_REAL_IP_RECURSIVE
+          value: "off"
+        - name: PROXY_READ_TIMEOUT
+          value: "120"
+        - name: CLIENT_MAX_BODY_SIZE
+          value: 50m
         envFrom:
         - configMapRef:
             name: erpnext-config
@@ -187,6 +211,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis-queue
+  namespace: erpnext
 spec:
   replicas: 1
   selector:
@@ -212,6 +237,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis-cache
+  namespace: erpnext
 spec:
   replicas: 1
   selector:
@@ -237,6 +263,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis-socketio
+  namespace: erpnext
 spec:
   replicas: 1
   selector:
@@ -262,6 +289,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: queue-default
+  namespace: erpnext
 spec:
   replicas: 1
   selector:
@@ -276,6 +304,9 @@ spec:
       - name: queue-default
         image: excelazmin/erpnext-v14:v15.3.0
         command: ["bench", "worker", "--queue", "default"]
+        env:
+        - name: REDIS_QUEUE
+          value: redis://redis-queue:6379
         volumeMounts:
         - mountPath: /home/frappe/frappe-bench/sites
           name: sites-volume
@@ -288,11 +319,13 @@ spec:
       - name: logs-volume
         persistentVolumeClaim:
           claimName: logs-pvc
+
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: queue-long
+  namespace: erpnext
 spec:
   replicas: 1
   selector:
@@ -307,6 +340,9 @@ spec:
       - name: queue-long
         image: excelazmin/erpnext-v14:v15.3.0
         command: ["bench", "worker", "--queue", "long"]
+        env:
+        - name: REDIS_QUEUE
+          value: redis://redis-queue:6379
         volumeMounts:
         - mountPath: /home/frappe/frappe-bench/sites
           name: sites-volume
@@ -324,6 +360,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: queue-short
+  namespace: erpnext
 spec:
   replicas: 1
   selector:
@@ -338,37 +375,9 @@ spec:
       - name: queue-short
         image: excelazmin/erpnext-v14:v15.3.0
         command: ["bench", "worker", "--queue", "short"]
-        volumeMounts:
-        - mountPath: /home/frappe/frappe-bench/sites
-          name: sites-volume
-        - mountPath: /home/frappe/frappe-bench/logs
-          name: logs-volume
-      volumes:
-      - name: sites-volume
-        persistentVolumeClaim:
-          claimName: sites-pvc
-      - name: logs-volume
-        persistentVolumeClaim:
-          claimName: logs-pvc
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: scheduler
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: scheduler
-  template:
-    metadata:
-      labels:
-        app: scheduler
-    spec:
-      containers:
-      - name: scheduler
-        image: excelazmin/erpnext-v14:v15.3.0
-        command: ["bench", "schedule"]
+        env:
+        - name: REDIS_QUEUE
+          value: redis://redis-queue:6379
         volumeMounts:
         - mountPath: /home/frappe/frappe-bench/sites
           name: sites-volume
@@ -386,6 +395,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: websocket
+  namespace: erpnext
 spec:
   replicas: 1
   selector:
@@ -400,6 +410,9 @@ spec:
       - name: websocket
         image: excelazmin/erpnext-v14:v15.3.0
         command: ["node", "/home/frappe/frappe-bench/apps/frappe/socketio.js"]
+        env:
+        - name: REDIS_SOCKETIO
+          value: redis://redis-socketio:6379
         volumeMounts:
         - mountPath: /home/frappe/frappe-bench/sites
           name: sites-volume
@@ -412,11 +425,14 @@ spec:
       - name: logs-volume
         persistentVolumeClaim:
           claimName: logs-pvc
+
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: backend
+  namespace: erpnext
 spec:
   selector:
     app: backend
@@ -429,6 +445,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: mariadb-master
+  namespace: erpnext
 spec:
   selector:
     app: mariadb-master
@@ -441,6 +458,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: mariadb-slave1
+  namespace: erpnext
 spec:
   selector:
     app: mariadb-slave1
@@ -453,6 +471,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: mariadb-slave2
+  namespace: erpnext
 spec:
   selector:
     app: mariadb-slave2
@@ -465,6 +484,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: redis-queue
+  namespace: erpnext
 spec:
   selector:
     app: redis-queue
@@ -477,6 +497,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: redis-cache
+  namespace: erpnext
 spec:
   selector:
     app: redis-cache
@@ -489,6 +510,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: redis-socketio
+  namespace: erpnext
 spec:
   selector:
     app: redis-socketio
@@ -501,6 +523,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: frontend
+  namespace: erpnext
 spec:
   selector:
     app: frontend
@@ -513,6 +536,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: websocket
+  namespace: erpnext
 spec:
   selector:
     app: websocket

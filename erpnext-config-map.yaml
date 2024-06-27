@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: erpnext-config
+  namespace: erpnext
 data:
   DB_HOST: "mariadb-master"
   DB_PORT: "3306"
